@@ -1,6 +1,8 @@
-import {createContext, useContext, useReducer, useState} from "react";
+import { createContext, useEffect, useReducer } from "react";
 
 export const CartContext = createContext(null);
+
+const STORAGE_KEY = "cart";
 
 function CartReducer(items, action) {
     switch (action.type) {
@@ -17,7 +19,7 @@ function CartReducer(items, action) {
 
         case "decrease":
             return items
-                .map(i => i.id === action.id ? {...i, qty: i.qty - 1} : i)
+                .map(i => (i.id === action.id ? {...i, qty: i.qty - 1 } : i))
                 .filter(i => i.qty > 0);
 
         case "remove":
@@ -28,9 +30,25 @@ function CartReducer(items, action) {
     }
 }
 
+function loadCart() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
 
-export function CartProvider({ children}) {
-    const [items, dispatch] = useReducer(CartReducer, [])
+export function CartProvider({children}) {
+    const [items, dispatch] = useReducer(CartReducer, [], loadCart);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        } catch {
+        }
+    }, [items]);
 
     const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
 
@@ -38,5 +56,5 @@ export function CartProvider({ children}) {
         <CartContext.Provider value={{items, total, dispatch}}>
             {children}
         </CartContext.Provider>
-    )
+    );
 }
